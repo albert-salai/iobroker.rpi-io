@@ -1,0 +1,40 @@
+{
+	"cli": true,
+	"target": "directory",
+	"adapterName": "rpi-io",
+	"title": "RPI IO",
+	"description": "iobroker io adapter for raspberry pi",
+	"expert": "yes",
+	"features": [
+		"adapter"
+	],
+	"adminFeatures": [
+		"tab"
+	],
+	"type": "hardware",
+	"startMode": "daemon",
+	"connectionType": "local",
+	"dataSource": "poll",
+	"connectionIndicator": "yes",
+	"language": "TypeScript",
+	"nodeVersion": "20",
+	"adminUi": "json",
+	"tabReact": "no",
+	"tools": [
+		"ESLint"
+	],
+	"releaseScript": "no",
+	"devServer": "yes",
+	"devServerPort": 8081,
+	"indentation": "Tab",
+	"quotes": "single",
+	"authorName": "Albert Salai",
+	"authorGithub": "albert-salai",
+	"authorEmail": "albert2013@salai.de",
+	"gitRemoteProtocol": "SSH",
+	"gitCommit": "yes",
+	"defaultBranch": "main",
+	"license": "MIT License",
+	"dependabot": "no",
+	"creatorVersion": "2.6.5"
+}

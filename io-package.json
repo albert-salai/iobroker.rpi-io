@@ -1,0 +1,129 @@
+{
+	"common": {
+		"name": "rpi-io",
+		"version": "0.0.1",
+		"news": {
+			"0.0.1": {
+				"en": "initial release",
+				"de": "Erstveröffentlichung",
+				"ru": "Начальная версия",
+				"pt": "lançamento inicial",
+				"nl": "Eerste uitgave",
+				"fr": "Première version",
+				"it": "Versione iniziale",
+				"es": "Versión inicial",
+				"pl": "Pierwsze wydanie",
+				"uk": "Початкова версія",
+				"zh-cn": "首次出版"
+			}
+		},
+		"titleLang": {
+			"en": "RPI IO",
+			"de": "RPI IO",
+			"ru": "РПИ ввода-вывода",
+			"pt": "RPI/ES/O",
+			"nl": "RPI-IO",
+			"fr": "E/S RPI",
+			"it": "RPIIO",
+			"es": "E/S de RPI",
+			"pl": "We/wy RPI",
+			"uk": "RPI IO",
+			"zh-cn": "转速输入输出"
+		},
+		"desc": {
+			"en": "iobroker io adapter for raspberry pi",
+			"de": "iobroker io-Adapter für Raspberry Pi",
+			"ru": "iobroker io-адаптер для Raspberry Pi",
+			"pt": "Adaptador iobroker io para raspberry pi",
+			"nl": "iobroker io-adapter voor Raspberry Pi",
+			"fr": "Adaptateur iobroker io pour Raspberry Pi",
+			"it": "adattatore iobroker io per Raspberry Pi",
+			"es": "Adaptador iobroker io para frambuesa pi",
+			"pl": "Adapter iobroker io dla Raspberry Pi",
+			"uk": "iobroker io адаптер для raspberry pi",
+			"zh-cn": "适用于树莓派的 iobroker io 适配器"
+		},
+		"authors": [
+			"Albert Salai <albert2013@salai.de>"
+		],
+		"keywords": [
+			"ioBroker",
+			"template",
+			"Smart Home",
+			"home automation"
+		],
+		"licenseInformation": {
+			"type": "free",
+			"license": "MIT"
+		},
+		"platform": "Javascript/Node.js",
+		"icon": "rpi-io.png",
+		"enabled": true,
+		"extIcon": "https://raw.githubusercontent.com/albert-salai/ioBroker.rpi-io/main/admin/rpi-io.png",
+		"readme": "https://github.com/albert-salai/ioBroker.rpi-io/blob/main/README.md",
+		"loglevel": "debug",
+		"tier": 3,
+		"mode": "daemon",
+		"type": "hardware",
+		"compact": true,
+		"connectionType": "local",
+		"dataSource": "poll",
+		"adminUI": {
+			"config": "json",
+			"tab": "materialize"
+		},
+		"adminTab": {
+			"singleton": true,
+			"name": {
+				"en": "RPI IO",
+				"de": "RPI IO",
+				"ru": "РПИ ввода-вывода",
+				"pt": "RPI/ES/O",
+				"nl": "RPI-IO",
+				"fr": "E/S RPI",
+				"it": "RPIIO",
+				"es": "E/S de RPI",
+				"pl": "We/wy RPI",
+				"uk": "RPI IO",
+				"zh-cn": "转速输入输出"
+			},
+			"link": "",
+			"fa-icon": "info"
+		},
+		"dependencies": [
+			{
+				"js-controller": ">=6.0.11"
+			}
+		],
+		"globalDependencies": [
+			{
+				"admin": ">=7.0.23"
+			}
+		]
+	},
+	"native": {},
+	"objects": [],
+	"instanceObjects": [
+		{
+			"_id": "info",
+			"type": "channel",
+			"common": {
+				"name": "Information"
+			},
+			"native": {}
+		},
+		{
+			"_id": "info.connection",
+			"type": "state",
+			"common": {
+				"role": "indicator.connected",
+				"name": "Device or service connected",
+				"type": "boolean",
+				"read": true,
+				"write": false,
+				"def": false
+			},
+			"native": {}
+		}
+	]
+}
