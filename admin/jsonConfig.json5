@@ -1,0 +1,19 @@
+// see https://github.com/ioBroker/ioBroker.admin/blob/master/packages/jsonConfig/SCHEMA.md
+{
+	"i18n": true,
+	"type": "tabs",
+	"tabsStyle": {
+		width: "calc(100% - 100px)"
+	},
+	"items": {
+		"_general": {
+			"#include": "jsonConfig.general.json5"
+		},
+		"_gpio": {
+			"#include": "jsonConfig.gpio.json5"
+		},
+		"_mcp23017": {
+			"#include": "jsonConfig.mcp23017.json5"
+		}
+	}
+}
