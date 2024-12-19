@@ -1,19 +1,199 @@
-// see https://github.com/ioBroker/ioBroker.admin/blob/master/packages/jsonConfig/SCHEMA.md
+// see						https://github.com/ioBroker/ioBroker.admin/blob/master/packages/jsonConfig/src/types.d.ts
+// ObjectBrowserType		https://github.com/ioBroker/ioBroker.admin/blob/master/packages/adapter-react-v5/src/Components/types.d.ts
+// Schema					https://github.com/ioBroker/ioBroker.admin/blob/master/packages/jsonConfig/schemas/jsonConfig.json
 {
-	"i18n": true,
-	"type": "tabs",
+	$schema:	"https://raw.githubusercontent.com/ioBroker/ioBroker.admin/refs/heads/master/packages/jsonConfig/schemas/jsonConfig.json",
+	"i18n":		true,
+	"type":		"tabs",
 	"tabsStyle": {
 		width: "calc(100% - 100px)"
 	},
 	"items": {
+		// =======
+		// General
+		// =======
 		"_general": {
-			"#include": "jsonConfig.general.json5"
+			"type": "panel",
+			  "label": "General",
+			"items": {
+				// I2C_BUS
+				"_I2C_BUS_HEADER": {
+					"type": "header",
+					"text": "I2C BUS",
+					"size": 2
+				},
+				"I2cBusNb": {
+					"type": "number",
+					"label": "I2 Bus Number",
+					"min": 0,
+					"max": 1,
+					"step": 1,
+					"default": 1,
+					"sm": 2
+				}
+			}
 		},
+
+		// ====
+		// GPIO
+		// ====
 		"_gpio": {
-			"#include": "jsonConfig.gpio.json5"
+			"type": "panel",
+			"label": "GPIO",
+			"items": {
+				"_GPIO_SETTINGS_HEADER": {
+					"type": "header",
+					"text": "Gpio Settings",
+					"size": 2
+				},
+				"GpioPollSecs": {
+					"type": "number",
+					"label": "Poll interval [s]",
+					"min": 0,
+					"default": 10,
+					"sm": 1
+				},
+				"_GPIO_INPUT_HEADER": {
+					"type": "header",
+					"text": "GPIO INPUT",
+					"size": 2
+				},
+				"GpioInput": {
+					"type": "table",
+					"items": [
+						{ "title": {"en": "GPIO"			}, "attr": "gpioNum",		"type": "number", "min": 1, "max": 27,						"width": "5%"	},
+						{ "title": {"en": "state"			}, "attr": "state",			"type": "text",							"default": "",		"width": "25%"	},
+						{ "title": {"en": "name"			}, "attr": "name",			"type": "text",							"default": "",		"width": "25%"	},
+						{ "title": {"en": "role"			}, "attr": "role",			"type": "text",							"default": "",		"width": "25%"	},
+						{ "title": {"en": "inverted"		}, "attr": "inverted",		"type": "checkbox",						"default": true,	"width": "15%"	},
+						{ "title": {"en": "history"			}, "attr": "history",		"type": "checkbox",						"default": true,	"width": "5%"	},
+					]
+				},
+				"_GPIO_OUTPUT_HEADER": {
+					"type": "header",
+					"text": "GPIO OUTPUT",
+					"size": 2
+				},
+				"GpioOutput": {
+					"type": "table",
+					"items": [
+						{ "title": {"en": "GPIO"			}, "attr": "gpioNum",		"type": "number", "min": 1, "max": 27,						"width": "5%"	},
+						{ "title": {"en": "state"			}, "attr": "state",			"type": "text",							"default": "",		"width": "25%"	},
+						{ "title": {"en": "name"			}, "attr": "name",			"type": "text",							"default": "",		"width": "25%"	},
+						{ "title": {"en": "role"			}, "attr": "role",			"type": "text",							"default": "",		"width": "25%"	},
+						{ "title": {"en": "inverted"		}, "attr": "inverted",		"type": "checkbox",						"default": true,	"width": "5%"	},
+						{ "title": {"en": "default"			}, "attr": "default",		"type": "checkbox",						"default": false,	"width": "5%"	},
+						{ "title": {"en": "auto-off [s]"	}, "attr": "autoOffSecs",	"type": "number", "min": 0,				"default": 0,		"width": "5%"	},
+						{ "title": {"en": "history"			}, "attr": "history",		"type": "checkbox",						"default": true,	"width": "5%"	},
+					]
+				}
+			}
 		},
+
+		// ========
+		// MCP23017
+		// ========
 		"_mcp23017": {
-			"#include": "jsonConfig.mcp23017.json5"
+			"type": "panel",
+			"label": "MCP23017",
+			"items": {
+				"_MCP_SETTINGS_HEADLINE": {
+					"type": "header",
+					"text": "I2C MCP23017 I/O Expander Settings",
+					"size": 2
+				},
+				"McpIntStateId": {
+					"type": "objectId",
+					"types": "state",
+					"label": "INT pin",
+					"default": "",
+					"sm": 4
+				},
+				"McpResetStateId": {
+					"type": "objectId",
+					"types": "state",
+					"label": "RESET pin",
+					"default": "",
+					"sm": 4
+				},
+				"McpPollSecs": {
+					"type": "number",
+					"label": "Poll interval [s]",
+					"min": 0,
+					"default": 10,
+					"sm": 1
+				},
+
+				"_MCP_INPUT_PINS_HEADLINE": {
+					"type": "header",
+					"text": "MCP INPUT",
+					"size": 2
+				},
+				"McpInput": {
+					"type": "table",
+					"items": [
+						{ "title": {"en": "pin" }, "attr": "mcpPin", "type": "select", "width": "5%", "options": [
+							{ "label": {"en": "A0"}, "value": "A0" },
+							{ "label": {"en": "A1"}, "value": "A1" },
+							{ "label": {"en": "A2"}, "value": "A2" },
+							{ "label": {"en": "A3"}, "value": "A3" },
+							{ "label": {"en": "A4"}, "value": "A4" },
+							{ "label": {"en": "A5"}, "value": "A5" },
+							{ "label": {"en": "A6"}, "value": "A6" },
+							{ "label": {"en": "A7"}, "value": "A7" },
+							{ "label": {"en": "B0"}, "value": "B0" },
+							{ "label": {"en": "B1"}, "value": "B1" },
+							{ "label": {"en": "B2"}, "value": "B2" },
+							{ "label": {"en": "B3"}, "value": "B3" },
+							{ "label": {"en": "B4"}, "value": "B4" },
+							{ "label": {"en": "B5"}, "value": "B5" },
+							{ "label": {"en": "B6"}, "value": "B6" },
+							{ "label": {"en": "B7"}, "value": "B7" }
+						]},
+						{ "title": {"en": "state"		}, "attr": "state",		"type": "text",		"default": "",		"width": "25%"	},
+						{ "title": {"en": "name"		}, "attr": "name",		"type": "text",		"default": "",		"width": "25%"	},
+						{ "title": {"en": "role"		}, "attr": "role",		"type": "text",		"default": "",		"width": "25%"	},
+						{ "title": {"en": "inverted"	}, "attr": "inverted",	"type": "checkbox",	"default": true,	"width": "15%"	},
+						{ "title": {"en": "history"		}, "attr": "history",	"type": "checkbox",	"default": true,	"width": "5%"	},
+					]
+				},
+
+				"_MCP_OUTPUT_PINS_HEADLINE": {
+					"type": "header",
+					"text": "MCP OUTPUT",
+					"size": 2
+				},
+				"McpOutput": {
+					"type": "table",
+					"items": [
+						{ "title": {"en": "pin" }, "attr": "mcpPin", "type": "select", "width": "5%", "options": [
+							{ "label": {"en": "A0"}, "value": "A0" },
+							{ "label": {"en": "A1"}, "value": "A1" },
+							{ "label": {"en": "A2"}, "value": "A2" },
+							{ "label": {"en": "A3"}, "value": "A3" },
+							{ "label": {"en": "A4"}, "value": "A4" },
+							{ "label": {"en": "A5"}, "value": "A5" },
+							{ "label": {"en": "A6"}, "value": "A6" },
+							{ "label": {"en": "A7"}, "value": "A7" },
+							{ "label": {"en": "B0"}, "value": "B0" },
+							{ "label": {"en": "B1"}, "value": "B1" },
+							{ "label": {"en": "B2"}, "value": "B2" },
+							{ "label": {"en": "B3"}, "value": "B3" },
+							{ "label": {"en": "B4"}, "value": "B4" },
+							{ "label": {"en": "B5"}, "value": "B5" },
+							{ "label": {"en": "B6"}, "value": "B6" },
+							{ "label": {"en": "B7"}, "value": "B7" }
+						]},
+						{ "title": {"en": "state"			}, "attr": "state",			"type": "text",				"default": "",		"width": "25%"	},
+						{ "title": {"en": "name"			}, "attr": "name",			"type": "text",				"default": "",		"width": "25%"	},
+						{ "title": {"en": "role"			}, "attr": "role",			"type": "text",				"default": "",		"width": "25%"	},
+						{ "title": {"en": "inverted"		}, "attr": "inverted",		"type": "checkbox",			"default": true,	"width": "5%"	},
+						{ "title": {"en": "default"			}, "attr": "default",		"type": "checkbox",			"default": false,	"width": "5%"	},
+						{ "title": {"en": "auto-off [s]"	}, "attr": "autoOffSecs",	"type": "number", "min": 0,	"default": 0,		"width": "5%"	},
+						{ "title": {"en": "history"			}, "attr": "history",		"type": "checkbox",			"default": true,	"width": "5%"	},
+					]
+				}
+			}
 		}
 	}
 }

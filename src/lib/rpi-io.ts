@@ -69,12 +69,15 @@ export class RpiIo extends IoAdapter {
 
 			// create/update state object
 			await this.writeStateObj(stateId, {
-				'name':		input.name,
-				'role':		input.role,
-				'desc':		`GPIO ${input.gpioNum} INPUT${input.inverted ? ' inverted' : ''}`,
-				'type':		'boolean',
-				'read':		true,
-				'write':	false,
+				'common': {
+					'name':		input.name,
+					'role':		input.role,
+					'desc':		`GPIO ${input.gpioNum} INPUT${input.inverted ? ' inverted' : ''}`,
+					'type':		'boolean',
+					'read':		true,
+					'write':	false,
+				},
+				'history':		{ 'enabled': input.history }
 			});
 
 			// open GPIO INPUT pin
@@ -139,12 +142,15 @@ export class RpiIo extends IoAdapter {
 
 			// create/update state object
 			await this.writeStateObj(stateId, {
-				'name':		output.name,
-				'role':		output.role,
-				'desc':		`GPIO ${output.gpioNum} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+output.autoOffSecs+' s' : ''}`,
-				'type':		'boolean',
-				'read':		true,
-				'write':	true,
+				'common': {
+					'name':		output.name,
+					'role':		output.role,
+					'desc':		`GPIO ${output.gpioNum} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+output.autoOffSecs+' s' : ''}`,
+					'type':		'boolean',
+					'read':		true,
+					'write':	true,
+				},
+				'history':		{ 'enabled': output.history }
 			});
 
 			// initialize state
@@ -236,12 +242,15 @@ export class RpiIo extends IoAdapter {
 
 			// create/update state object
 			await this.writeStateObj(stateId, {
-				'name':		input.name,
-				'role':		input.role,
-				'desc':		`MCP ${input.mcpPin} INPUT${input.inverted ? ' inverted' : ''}`,
-				'type':		'boolean',
-				'read':		true,
-				'write':	false,
+				'common': {
+					'name':		input.name,
+					'role':		input.role,
+					'desc':		`MCP ${input.mcpPin} INPUT${input.inverted ? ' inverted' : ''}`,
+					'type':		'boolean',
+					'read':		true,
+					'write':	false,
+				},
+				'history':		{ 'enabled': input.history }
 			});
 
 			// initialize state
@@ -290,12 +299,15 @@ export class RpiIo extends IoAdapter {
 
 			// create/update state object
 			await this.writeStateObj(stateId, {
-				'name':		output.name,
-				'role':		output.role,
-				'desc':		`MCP ${output.mcpPin} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+output.autoOffSecs+' s' : ''}`,
-				'type':		'boolean',
-				'read':		true,
-				'write':	true,
+				'common': {
+					'name':		output.name,
+					'role':		output.role,
+					'desc':		`MCP ${output.mcpPin} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+output.autoOffSecs+' s' : ''}`,
+					'type':		'boolean',
+					'read':		true,
+					'write':	true,
+				},
+				'history':		{ 'enabled': output.history }
 			});
 
 			// initialize state

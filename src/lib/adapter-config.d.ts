@@ -15,6 +15,7 @@ declare global {
 				name:			string,
 				role:			string,
 				inverted:		boolean,
+				history:		boolean,
 			}[],
 			'GpioOutput': {
 				gpioNum:		number,
@@ -24,6 +25,7 @@ declare global {
 				inverted:		boolean,
 				default:		boolean,
 				autoOffSecs:	number,
+				history:		boolean,
 			}[],
 
 			// MCP23017
@@ -36,6 +38,7 @@ declare global {
 				name:			string,
 				role:			string,
 				inverted:		boolean,
+				history:		boolean,
 			}[],
 			'McpOutput': {
 				mcpPin:			'A0'|'A1'|'A2'|'A3'|'A4'|'A5'|'A6'|'A7'|'B0'|'B1'|'B2'|'B3'|'B4'|'B5'|'B6'|'B7',
@@ -45,6 +48,7 @@ declare global {
 				inverted:		boolean,
 				default:		boolean,
 				autoOffSecs:	number,
+				history:		boolean,
 			}[]
 		}
 	}

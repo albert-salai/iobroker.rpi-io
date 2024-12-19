@@ -1,14 +1,24 @@
 import { Adapter, AdapterOptions }		from '@iobroker/adapter-core';
 import { Mutex }						from 'async-mutex';
 import { sprintf }						from 'sprintf-js';
-
-
 // see also
 //		https://github.com/ioBroker/ioBroker/wiki/Adapter-Development-Documentation#structure-of-io-packagejson
+//		https://github.com/ioBroker/ioBroker.js-controller/blob/master/packages/adapter/src/lib/adapter/adapter.ts
 
-// see https://stackoverflow.com/questions/41139763/how-to-declare-a-fixed-length-array-in-typescript
-type GrowToSize<T, N extends number, A extends T[]> = A['length'] extends N ? A : GrowToSize<T, N, [...A, T]>;
-export type FixedArray<T, N extends number> = GrowToSize<T, N, []>;
+// dateStr(ts)
+export function dateStr(ts: number = Date.now()): string {
+	const  d = new Date(ts);
+	return sprintf('%02d.%02d.%04d %02d:%02d:%02d', d.getDate(), d.getMonth() + 1, d.getFullYear(), d.getHours(), d.getMinutes(), d.getSeconds());
+}
+
+// valStr(ts)
+export function valStr(val: ioBroker.StateValue): string {
+	if		(       val ===  null		)	{ return 'null';				}
+	if		(typeof val === 'string'	)	{ return  val;					}
+	else if (typeof val ===	'boolean'	)	{ return (val) ? 'ON' : 'OFF';	}
+	else                 /* 'number' */		{ return isFinite(val) ? (Math.round(val*1e6)/1e6).toString() : val.toString(); }
+}
+
 
 // default logf
 const logf = {
@@ -19,8 +29,9 @@ const logf = {
 	'error':	(_fmt: string, ..._args: unknown[]): void => {},
 };
 
-// StateChange
-export type StateChange = { val: ioBroker.StateValue, ack: boolean, ts: number };
+// StateVal, StateChange
+export type StateVal	= number | boolean | string;
+export type StateChange	= { val: StateVal, ack: boolean, ts: number };
 
 // StateChangeCb
 type StateChangeCb = (stateChange: StateChange) => Promise<void>;
@@ -33,31 +44,29 @@ interface StateChangeSpec {
 	ack?:		boolean,			// ack: true|false|undefined
 };
 
-// WriteStateCommon					// make 'role' | 'read' | 'write' optional
+// WriteStateObj
 type StateObjCommon		= ioBroker.SettableStateObject['common'];
-type WriteStateCommon	= Partial<StateObjCommon> & Pick<StateObjCommon, 'name' | 'type'>;
-
-// ObjCommon
-type ObjNative = Record<string, unknown>;
-
-// valStr(ts)
-export function valStr(val: ioBroker.StateValue): string {
-	if		(       val ===  null		)	{ return 'null';				}
-	if		(typeof val === 'string'	)	{ return  val;					}
-	else if (typeof val ===	'boolean'	)	{ return (val) ? 'ON' : 'OFF';	}
-	else                 /* 'number' */		{ return isFinite(val) ? (Math.round(val*1e6)/1e6).toString() : val.toString(); }
-}
-
-// dateStr(ts)
-export function dateStr(ts: number = Date.now()): string {
-	const  d = new Date(ts);
-	return sprintf('%02d.%02d.%04d %02d:%02d:%02d', d.getDate(), d.getMonth() + 1, d.getFullYear(), d.getHours(), d.getMinutes(), d.getSeconds());
-}
-
-// sortBy(key)
-export function sortBy<T extends Record<string, any>>(key: string): ((a: T, b: T) => number) {
-	return (a: T, b: T) => (a[key] > b[key]) ? +1 : ((a[key] < b[key]) ? -1 : 0);
-}
+type HistoryObj = {
+	'enabled':						boolean,		// false
+	'counter'?:						boolean,		// false		Counter
+	'debounceTime'?:				number,			// 0			Only logs the value if it stays unchanged for X ms
+	'blockTime'?:					number,			// 0			Ignore all new values for X ms after last logged value
+	'changesOnly'?:					boolean,		// true			Record changes only
+	'changesRelogInterval'?:		number,			// 0 			Record the same values (seconds)
+	'changesMinDelta'?:				number,			// 0			Minimum difference from last value
+	'ignoreBelowNumber'?:			string,			// ''			Ignore values below
+	'disableSkippedValueLogging'?:	boolean,		// false		Disable charting optimized logging of skipped values
+	'retention'?:					number,			// 0 			Storage retention (seconds)
+	'maxLength'?:					number,			// 0			maximum datapoint count in RAM
+	'enableDebugLogs'?:				boolean,		// false		Enable enhanced debug logs for the state
+//	'ignoreAboveNumber'?:			string,			// 				Ignore values above
+//	'round'?:						string,			// 				On query round numbers to
+};
+export type WriteStateObj = {
+	'common':		Partial<StateObjCommon> & Pick<StateObjCommon, 'name' | 'type' | 'def'>,
+	'native'?:		ioBroker.SettableStateObject['native'],
+	'history'?:		HistoryObj,
+};
 
 
 // ~~~~~~~~~
@@ -70,6 +79,7 @@ export class IoAdapter extends Adapter {
 	private			stateChangeSpecs:	Record<string, StateChangeSpec[]>		= {};		// by stateId
 	private			stateObject:		Record<string, ioBroker.StateObject>	= {};		// by stateId
 	private			mutex														= new Mutex();
+	private			saveConfig:			boolean;
 
 	/**
 	 *
@@ -77,7 +87,8 @@ export class IoAdapter extends Adapter {
 	 */
 	public constructor(options: AdapterOptions) {
 		super(options);
-		IoAdapter.this = this;
+		IoAdapter.this  = this;
+		this.saveConfig = false;
 
 		// on ready
 		// ~~~~~~~~
@@ -111,6 +122,12 @@ export class IoAdapter extends Adapter {
 				await this.onReady();
 				await this.setState('info.connection', true, true);
 
+				// save config and restart adapter
+				if (this.saveConfig) {
+					this.updateConfig(this.config);			// will restart adapter
+					return;
+				}
+
 			} catch (e: unknown) {
 				this.log.error(`${e}\n${(e instanceof Error) ? e.stack : JSON.stringify(e)}`);
 				this.setState('info.connection', false, true);
@@ -129,8 +146,8 @@ export class IoAdapter extends Adapter {
 		// ~~~~~~~~~~~~~~
 		this.on('stateChange', (stateId: string, state: ioBroker.State | null | undefined) => {
 			this.runExclusive(async () => {				// handle state changes one-by-one!
-				if (state)	{ await this.onStateChange(stateId, state); }
-				else		{ this.logf.warn('%-15s %-15s %-10s %-45s', this.constructor.name, 'stateHandler()', 'deleted', stateId); }
+				if (state)	{ await this.onChange(stateId, state); }
+				else		{ this.logf.warn('%-15s %-15s %-10s %-45s', this.constructor.name, 'onChange()', 'deleted', stateId); }
 			});
 		});
 
@@ -142,7 +159,17 @@ export class IoAdapter extends Adapter {
 	/**
 	 *
 	 */
+	public save_config(): void {
+		this.logf.warn('%-15s %-15s %-10s %-45s', this.constructor.name, 'save_config()', '', 'will restart ...');
+		this.saveConfig = true;
+	}
+
+
+	/**
+	 *
+	 */
 	protected async onReady(): Promise<void> {}
+
 
 	/**
 	 *
@@ -210,28 +237,32 @@ export class IoAdapter extends Adapter {
 	 * @param common
 	 */
 	//
-	public async writeStateObj(stateId: string, common: WriteStateCommon, native: ObjNative = {}): Promise<ioBroker.StateObject> {
+	public async writeStateObj(stateId: string, opts: WriteStateObj): Promise<ioBroker.StateObject> {
+		// common, native
+		let common	= { 'role': 'value',  'read': true, 'write': false, ...opts.common };
+		let native	= opts.native ?? {};
+
 		// update common, native from existing object
 		const obj = await this.getForeignObjectAsync(stateId);
 		if (obj) {
-			// overwrite common, native
-			common = Object.assign(obj.common, common);
 			native = Object.assign(obj.native, native);
+			common = Object.assign(obj.common, common);
+		}
 
-			// update history storageType
-			if (common.custom  &&  this.historyId) {
-				const history		=  common.custom[this.historyId];
-				const storageType	= (common.type[0] || '').toUpperCase() + obj.common.type.slice(1);
-				if (history  &&  history.storageType !== storageType) {
-					history.storageType = storageType;
-				}
-			}
+		// history
+		if (this.historyId) {
+			const custom:  Record<string, any>		= common.custom		= common.custom ?? {};
+			const history							= custom[this.historyId]			?? {};
+			custom[this.historyId] = (opts.history?.enabled !== true) ? null : Object.assign(history, opts.history, {
+				'storageType':	(common.type[0] || '').toUpperCase() + common.type.slice(1),
+				'maxLength':	0,					// FIXME
+			});
 		}
 
 		// create new or update existing object
 		await this.setForeignObjectAsync(stateId, {
 			'type':			'state',
-			'common':		{ 'role': 'value', 'read': true, 'write': false, ...common },
+			'common':		common,
 			'native':		native
 		});
 
@@ -331,16 +362,17 @@ export class IoAdapter extends Adapter {
 	 * @param stateId
 	 * @param state
 	 */
-	private async onStateChange(stateId: string, iobState: ioBroker.State): Promise<void> {
+	private async onChange(stateId: string, iobState: ioBroker.State): Promise<void> {
 		const { val, ack, ts } = iobState;
-		if (val === null) {
-			this.logf.error('%-15s %-15s %-10s %-45s %s   %-3s %s', this.constructor.name, 'onStateChange()', '', stateId, dateStr(ts), (ack ? '' : 'cmd'), 'null');
+
+		if (val === null  ||  typeof val === 'string') {
+			this.logf.error('%-15s %-15s %-10s %-45s %s   %-3s %s', this.constructor.name, 'onChange()', '', stateId, dateStr(ts), (ack ? '' : 'cmd'), JSON.stringify(val));
 
 		} else {
 			// call callbacks if opts do match
 			const specs = this.stateChangeSpecs[stateId];
 			if (! specs) {
-				this.logf.error('%-15s %-15s %-10s %-45s %s   %-3s %s', this.constructor.name, 'onStateChange()', 'no spec', stateId, dateStr(ts), (ack ? '' : 'cmd'), valStr(val));
+				this.logf.error('%-15s %-15s %-10s %-45s %s   %-3s %s', this.constructor.name, 'onChange()', 'no spec', stateId, dateStr(ts), (ack ? '' : 'cmd'), valStr(val));
 
 			} else {
 				for (const spec of specs) {
