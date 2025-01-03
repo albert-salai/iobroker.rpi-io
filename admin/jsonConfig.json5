@@ -53,6 +53,13 @@
 					"default": 10,
 					"sm": 1
 				},
+				"GpioDebounceMs": {
+					"type": "number",
+					"label": "Debounce [ms]",
+					"min": 0,
+					"default": 20,
+					"sm": 1
+				},
 				"_GPIO_INPUT_HEADER": {
 					"type": "header",
 					"text": "GPIO INPUT",

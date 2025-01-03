@@ -35,8 +35,10 @@
 		"inlineSourceMap": false
 	},
 	"include": [
+		"test/**/*.ts",
 		"src/**/*.ts",
-		"test/**/*.ts"
+		"src/**/*.mts",
+        "eslint.config.mjs",
 	],
 	"exclude": [
 		"build/**",

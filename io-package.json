@@ -62,7 +62,7 @@
 		"extIcon": "https://raw.githubusercontent.com/albert-salai/ioBroker.rpi-io/main/admin/rpi-io.png",
 		"readme": "https://github.com/albert-salai/ioBroker.rpi-io/blob/main/README.md",
 		"loglevel": "debug",
-		"tier": 3,
+		"tier": 1,
 		"mode": "daemon",
 		"type": "hardware",
 		"compact": true,

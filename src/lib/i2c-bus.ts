@@ -32,7 +32,7 @@ export class I2cBus {
 	 * @returns
 	 */
 	public async runExclusive<T>(cb: () => Promise<T>, timeoutMs = 200): Promise<T> {
-		const timeoutErr = new Error(`${this.constructor.name}: runExclusive(): timeout after ${timeoutMs} ms`);
+		const timeoutErr = new Error(`${this.constructor.name}: runExclusive(): timeout after ${String(timeoutMs)} ms`);
 
 		return this.mutex.runExclusive(() => {
 			return new Promise<T>((resolve, reject) => {
@@ -45,10 +45,10 @@ export class I2cBus {
 				// try to run callback
 				cb()
 					.then(resolve)
-					.catch((err) => {
+					.catch((err: unknown) => {
 						const { errno, code, syscall } = err as { syscall: string, errno: number, code: string };
 						this.logf.error('%-15s %-15s %-10s %s() error %d %s', this.constructor.name, 'runExclusive()', 'i2c-error', syscall, errno, code);
-						reject(new Error(`${this.constructor.name}: runExclusive(): ${syscall} errno ${errno} ${code}`));
+						reject(new Error(`${this.constructor.name}: runExclusive(): ${syscall} errno ${String(errno)} ${code}`));
 					})
 					.finally(() => {
 						clearTimeout(timer);
@@ -63,7 +63,7 @@ export class I2cBus {
 	public scan(): Promise<number[]> {
 		const timeoutMs = 1000;
 		return this.runExclusive(async () => {
-			return (await this.bus.scan())  ||  [];
+			return (await this.bus.scan());
 		}, timeoutMs);
 	}
 
@@ -87,7 +87,7 @@ export class I2cBus {
 		return this.runExclusive(async () => {
 			const  rxBuf = Buffer.alloc(size);			// default: filled with 0
 			await  this.bus.readI2cBlock(address, register, rxBuf.length, rxBuf);
-			return Array.prototype.slice.call(rxBuf, 0);
+			return Array.from(rxBuf);
 		});
 	}
 

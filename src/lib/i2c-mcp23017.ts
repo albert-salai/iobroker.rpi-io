@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/prefer-literal-enum-member */
 import { IoAdapter }		from './io-adapter';
 import { I2cBus }			from './i2c-bus';
 
@@ -84,9 +85,9 @@ export class MCP23017 {
 	private readonly i2c:	I2cBus;
 	private readonly addr:	number;
 
-	private	inputMask:		number	= 0x0000;		// B7 (bit 15) ... B0 (bit 8)  A7 (bit 7) ... A0 (bit 0)
-	private	outputMask:		number	= 0x0000;		// B7 (bit 15) ... B0 (bit 8)  A7 (bit 7) ... A0 (bit 0)
-	private	pinStates:		number	= 0x0000;		// B7 (bit 15) ... B0 (bit 8)  A7 (bit 7) ... A0 (bit 0)
+	private	inputMask		= 0x0000;		// B7 (bit 15) ... B0 (bit 8)  A7 (bit 7) ... A0 (bit 0)
+	private	outputMask		= 0x0000;		// B7 (bit 15) ... B0 (bit 8)  A7 (bit 7) ... A0 (bit 0)
+	private	pinStates		= 0x0000;		// B7 (bit 15) ... B0 (bit 8)  A7 (bit 7) ... A0 (bit 0)
 	private pinCallbacks:	{ pinMask: number, cb: PinChangeCb }[]		= [];
 
 	// CONSTRUCTOR
@@ -179,8 +180,9 @@ export class MCP23017 {
 			}
 
 			// check if mcp is initialized
-			if (ioconb !== IOCON.MIRROR) {
-				this.logf.error('%-15s %-15s %-10s %-40s', this.constructor.name, 'readInputs()', '', 're-initializing mcp...');
+			if ((ioconb as IOCON) !== IOCON.MIRROR) {
+				this.logf.error('%-15s %-15s %-10s %08b',	this.constructor.name, 'readInputs()', 'ioconb', ioconb);
+				this.logf.error('%-15s %-15s %-10s %-40s',	this.constructor.name, 'readInputs()', '', 're-initializing mcp...');
 				await this.init();
 				return await this.readInputs();
 			}

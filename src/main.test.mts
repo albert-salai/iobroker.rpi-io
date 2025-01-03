@@ -12,7 +12,7 @@ describe('module to test => function to test', () => {
 	// initializing logic
 	const expected = 5;
 
-	it(`should return ${expected}`, () => {
+	it(`should return ${String(expected)}`, () => {
 		const result = 5;
 		// assign result a value from functionToTest
 		expect(result).to.equal(expected);

@@ -3,6 +3,7 @@ import { IoAdapter, StateChange, dateStr, valStr }		from './io-adapter';
 import { I2cBus }										from './i2c-bus';
 import { MCP23017 }										from './i2c-mcp23017';
 import   rpio											from 'rpio';		// tried also 'onoff', 'opengpio', 'pigpio', 'pigpio-client' but didn't work
+import   debounce										from 'debounce';
 
 // ~~~~~~~~~
 // IoAdapter
@@ -19,7 +20,7 @@ export class RpiIo extends IoAdapter {
 	 */
 	protected override async onReady(): Promise<void> {
 		try {
-			this.setState('info.connection', false, true);
+			await this.setState('info.connection', false, true);
 			await super.onReady();
 			//this.logf.debug('%-15s %-15s %-40s\n%s', this.constructor.name, 'onReady()', 'config', JSON.stringify(this.config, null, 4));
 
@@ -33,8 +34,8 @@ export class RpiIo extends IoAdapter {
 			this.logf.debug('%-15s %-15s %-40s', this.constructor.name, 'onReady()', 'done');
 
 		} catch (e: unknown) {
-			this.log.error(`${e}\n${(e instanceof Error) ? e.stack : JSON.stringify(e)}`);
-			this.setState('info.connection', false, true);
+			this.log.error((e instanceof Error) ? (e.stack ?? String(e)) : String(e));
+			await this.setState('info.connection', false, true);
 		}
 	}
 
@@ -72,7 +73,7 @@ export class RpiIo extends IoAdapter {
 				'common': {
 					'name':		input.name,
 					'role':		input.role,
-					'desc':		`GPIO ${input.gpioNum} INPUT${input.inverted ? ' inverted' : ''}`,
+					'desc':		`GPIO ${String(input.gpioNum)} INPUT${input.inverted ? ' inverted' : ''}`,
 					'type':		'boolean',
 					'read':		true,
 					'write':	false,
@@ -97,18 +98,20 @@ export class RpiIo extends IoAdapter {
 			}
 
 			// handle gpio input pin val changes
-			rpio.poll(input.gpioNum, (_pin: number) => {
+			const pinHandler = (_pin: number): void => {
 				const val = readPin();
-				this.runExclusive(async () => {
+				void this.runExclusive(async () => {
 					await this.writeState(stateId, { val, 'ack': true });
 				})
-			}, rpio.POLL_BOTH);
+			};
+			const pollHandler = (this.config.GpioDebounceMs <= 0) ? pinHandler : debounce(pinHandler, this.config.GpioDebounceMs);
+			rpio.poll(input.gpioNum, pollHandler, rpio.POLL_BOTH);
 		}
 
 		// check gpio input pins every GpioPollSecs
 		if (this.config.GpioPollSecs > 0) {
 			this.setInterval(() => {
-				this.runExclusive(async () => {
+				void this.runExclusive(async () => {
 					for (const input of this.config.GpioInput) {
 						const stateId	= `${channelId}.${input.state}`;
 						const stateObj	= await this.readState(stateId);
@@ -127,7 +130,7 @@ export class RpiIo extends IoAdapter {
 		for (const input of this.config.GpioInput) {
 			const stateId = `${channelId}.${input.state}`;
 			if (stateId !== this.config.McpResetStateId) {
-				this.subscribe({ stateId, 'ack': true, 'cb': async (_stateChange: StateChange) => {} });
+				await this.subscribe({ stateId, 'ack': true, 'cb': async (_stateChange: StateChange) => { /* empty */ } });
 			}
 		}
 
@@ -145,7 +148,7 @@ export class RpiIo extends IoAdapter {
 				'common': {
 					'name':		output.name,
 					'role':		output.role,
-					'desc':		`GPIO ${output.gpioNum} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+output.autoOffSecs+' s' : ''}`,
+					'desc':		`GPIO ${String(output.gpioNum)} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+String(output.autoOffSecs)+' s' : ''}`,
 					'type':		'boolean',
 					'read':		true,
 					'write':	true,
@@ -168,7 +171,7 @@ export class RpiIo extends IoAdapter {
 		for (const output of this.config.GpioOutput) {
 			const stateId = `${channelId}.${output.state}`;
 			// on output cmd --> write pin --> set output ack
-			this.subscribe({ stateId, 'ack': false, 'cb': async (stateChange: StateChange) => {
+			await this.subscribe({ stateId, 'ack': false, 'cb': async (stateChange: StateChange) => {
 				const val = (stateChange.val === true);
 				rpio.write(output.gpioNum, (val !== output.inverted) ? rpio.HIGH : rpio.LOW);
 				await this.writeState(stateId, { val, 'ack': true });
@@ -176,9 +179,9 @@ export class RpiIo extends IoAdapter {
 
 			// on output true ack --> wait autoOffSecs --> set ouput false cmd
 			if (output.autoOffSecs > 0) {
-				this.subscribe({ stateId, 'val': true, 'ack': true, 'cb': async (_stateChange: StateChange) => {
+				await this.subscribe({ stateId, 'val': true, 'ack': true, 'cb': (_stateChange: StateChange) => {
 					this.setTimeout(() => {
-						this.writeState(stateId, { 'val': false, 'ack': false });
+						void this.writeState(stateId, { 'val': false, 'ack': false });
 					}, 1000*output.autoOffSecs);
 				}});
 			}
@@ -190,28 +193,26 @@ export class RpiIo extends IoAdapter {
 	 * @param channelId
 	 */
 	private async init_i2c(channelId: string): Promise<void> {
-		this.i2cBus = await I2cBus.open(this.config['I2cBusNb']);
+		this.i2cBus = await I2cBus.open(this.config.I2cBusNb);
 
-		if (this.i2cBus) {
-			const i2cAddrs = await this.i2cBus.scan();
-			this.logf.debug('%-15s %-15s %-10s %-45s', this.constructor.name, 'init_i2c()', 'devices', JSON.stringify(i2cAddrs.map(addr => `0x${addr.toString(16)}`)));
+		const i2cAddrs = await this.i2cBus.scan();
+		this.logf.debug('%-15s %-15s %-10s %-45s', this.constructor.name, 'init_i2c()', 'devices', JSON.stringify(i2cAddrs.map(addr => `0x${addr.toString(16)}`)));
 
-			for (const i2cAddr of i2cAddrs) {
-				// found MCP23017
-				if (i2cAddr === 0x20) {
-					await this.init_mcp23017(channelId, this.i2cBus, i2cAddr);
+		for (const i2cAddr of i2cAddrs) {
+			// found MCP23017
+			if (i2cAddr === 0x20) {
+				await this.init_mcp23017(channelId, this.i2cBus, i2cAddr);
 
-				// found MCP2324
-				} else if (i2cAddr === 0x68) {
-					this.logf.debug('%-15s %-15s %-10s MCP2324 0x%02X not implemented',		this.constructor.name, 'init_i2c()', '', i2cAddr);
+			// found MCP2324
+			} else if (i2cAddr === 0x68) {
+				this.logf.debug('%-15s %-15s %-10s MCP2324 0x%02X not implemented',		this.constructor.name, 'init_i2c()', '', i2cAddr);
 
-				// found DS2482
-				} else if (i2cAddr === 0x18) {
-					this.logf.debug('%-15s %-15s %-10s DS2482 0x%02X not implemented',		this.constructor.name, 'init_i2c()', '', i2cAddr);
+			// found DS2482
+			} else if (i2cAddr === 0x18) {
+				this.logf.debug('%-15s %-15s %-10s DS2482 0x%02X not implemented',		this.constructor.name, 'init_i2c()', '', i2cAddr);
 
-				} else {
-					this.logf.debug('%-15s %-15s %-10s I2C device 0x%02X not implemented',	this.constructor.name, 'init_i2c()', 'error', i2cAddr);
-				}
+			} else {
+				this.logf.debug('%-15s %-15s %-10s I2C device 0x%02X not implemented',	this.constructor.name, 'init_i2c()', 'error', i2cAddr);
 			}
 		}
 	}
@@ -273,7 +274,7 @@ export class RpiIo extends IoAdapter {
 		// check mcp input pins every McpPollSecs
 		if (this.config.McpPollSecs > 0) {
 			this.setInterval(() => {
-				this.runExclusive(async () => {
+				void this.runExclusive(async () => {
 					const pinChange = await mcp.readInputs();
 					if (pinChange) {
 						this.logf.warn('%-15s %-15s %-10s %-45s 0b%016b', this.constructor.name, 'setInterval()', 'mismatch', 'pinChange', pinChange);
@@ -285,7 +286,7 @@ export class RpiIo extends IoAdapter {
 		// debug log input state changes
 		for (const input of this.config.McpInput) {
 			const stateId = `${channelId}.${input.state}`;
-			this.subscribe({ stateId, 'ack': true, 'cb': async (_stateChange: StateChange) => {}});
+			await this.subscribe({ stateId, 'ack': true, 'cb': async (_stateChange: StateChange) => { /* empty */ }});
 		}
 
 		// ~~~~~~~~~
@@ -302,7 +303,7 @@ export class RpiIo extends IoAdapter {
 				'common': {
 					'name':		output.name,
 					'role':		output.role,
-					'desc':		`MCP ${output.mcpPin} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+output.autoOffSecs+' s' : ''}`,
+					'desc':		`MCP ${output.mcpPin} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+String(output.autoOffSecs)+' s' : ''}`,
 					'type':		'boolean',
 					'read':		true,
 					'write':	true,
@@ -326,7 +327,7 @@ export class RpiIo extends IoAdapter {
 			const stateId = `${channelId}.${output.state}`;
 
 			// on output cmd --> write pin --> set output ack
-			this.subscribe({ stateId, 'ack': false, 'cb': async (stateChange: StateChange) => {
+			await this.subscribe({ stateId, 'ack': false, 'cb': async (stateChange: StateChange) => {
 				const val = (stateChange.val === true);
 				await mcp.setOutput({ 'pinName': output.mcpPin, 'pinVal': (val !== output.inverted) });
 				await this.writeState(stateId, { val, 'ack': true });
@@ -334,9 +335,9 @@ export class RpiIo extends IoAdapter {
 
 			// on output true ack --> wait autoOffSecs --> set ouput false cmd
 			if (output.autoOffSecs > 0) {
-				this.subscribe({ stateId, 'val': true, 'ack': true, 'cb': async (_stateChange: StateChange) => {
+				await this.subscribe({ stateId, 'val': true, 'ack': true, 'cb': (_stateChange: StateChange) => {
 					this.setTimeout(() => {
-						this.writeState(stateId, { 'val': false, 'ack': false });
+						void this.writeState(stateId, { 'val': false, 'ack': false });
 					}, 1000*output.autoOffSecs);
 				}});
 			}
@@ -344,7 +345,7 @@ export class RpiIo extends IoAdapter {
 
 		// on McpIntStateId true ack --> mcp.readInputs()
 		if (await this.readStateObject(this.config.McpIntStateId)) {
-			this.subscribe({'stateId': this.config.McpIntStateId, 'val': true, 'ack': true, 'cb': async (_stateChange: StateChange) => {
+			await this.subscribe({'stateId': this.config.McpIntStateId, 'val': true, 'ack': true, 'cb': async (_stateChange: StateChange) => {
 				await mcp.readInputs();
 			}});
 		}
@@ -355,8 +356,8 @@ export class RpiIo extends IoAdapter {
 			await this.writeState(this.config.McpResetStateId, { 'val': false, 'ack': true });
 
 			// on McpResetState ON ack --> reset mcp --> set McpResetState OFF cmd
-			this.subscribe({'stateId': this.config.McpResetStateId,  'val': true,  'ack': true, 'cb': async (_stateChange: StateChange) => {
-				await this.writeState( this.config.McpResetStateId, {'val': false, 'ack': false });		// set OFF cmd
+			await this.subscribe({'stateId': this.config.McpResetStateId,  'val': true,  'ack': true, 'cb': async (_stateChange: StateChange) => {
+				await this.writeState( this.config.McpResetStateId, { 'val': false, 'ack': false });		// set OFF cmd
 				await mcp.reset();
 			}});
 		}
@@ -366,6 +367,6 @@ export class RpiIo extends IoAdapter {
 		await mcp.readInputs();
 
 		// FIXME
-		this.config.McpPollSecs;
+		//this.config.McpPollSecs;
 	}
 }

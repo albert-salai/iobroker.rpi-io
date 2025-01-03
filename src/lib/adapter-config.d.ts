@@ -9,6 +9,7 @@ declare global {
 
 			// GPIO
 			'GpioPollSecs':		number,
+			'GpioDebounceMs':	number,
 			'GpioInput': {
 				gpioNum:		number,
 				state:			string,
