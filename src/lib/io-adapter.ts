@@ -1,1 +1,1 @@
-../../../ioBroker.io-lib/io-adapter.ts
+../../../ioBroker.io-lib/src/io-adapter.ts
