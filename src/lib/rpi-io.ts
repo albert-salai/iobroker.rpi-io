@@ -282,13 +282,11 @@ export class RpiIo extends IoAdapter {
 
 		// check mcp input pins every McpPollSecs
 		if (this.config.McpPollSecs > 0) {
-			this.setInterval(() => {
-				void this.runExclusive(async () => {
-					const pinChange = await mcp.readInputs();
-					if (pinChange) {
-						this.logf.warn('%-15s %-15s %-10s %-50s 0b%016b', this.constructor.name, 'setInterval()', 'mismatch', 'pinChange', pinChange);
-					}
-				});
+			this.setInterval(async () => {
+				const pinChange = await mcp.readInputs();
+				if (pinChange) {
+					this.logf.warn('%-15s %-15s %-10s %-50s 0b%016b', this.constructor.name, 'setInterval()', 'mismatch', 'pinChange', pinChange);
+				}
 			}, 1000*this.config.McpPollSecs);
 		}
 
