@@ -25,8 +25,8 @@
     "@iobroker/adapter-core": "^3.2.3",
     "async-mutex": "^0.5.0",
     "debounce": "^2.2.0",
+    "deep-diff": "^1.0.2",
     "i2c-bus": "^5.2.3",
-    "json-stable-stringify": "^1.2.1",
     "rpio": "^2.4.2",
     "sprintf-js": "^1.1.3"
   },

@@ -162,13 +162,6 @@ export class MCP23017 {
 	/**
 	 *
 	 */
-	public async reset(): Promise<void> {
-		// FIXME
-	}
-
-	/**
-	 *
-	 */
 	public async readInputs(): Promise<number> {
 		let pinChange = 0;
 		try {
@@ -179,12 +172,13 @@ export class MCP23017 {
 				return pinChange;
 			}
 
-			// check if mcp is initialized
+			// check if mcp is not yet initialized
 			if ((ioconb as IOCON) !== IOCON.MIRROR) {
-				this.logf.error('%-15s %-15s %-10s %08b',	this.constructor.name, 'readInputs()', 'ioconb', ioconb);
+				this.logf.error('%-15s %-15s %-10s 0b%08b',	this.constructor.name, 'readInputs()', 'ioconb', ioconb);
 				this.logf.error('%-15s %-15s %-10s %-40s',	this.constructor.name, 'readInputs()', '', 're-initializing mcp...');
 				await this.init();
-				return await this.readInputs();
+				pinChange = await this.readInputs();
+				return pinChange;
 			}
 
 			// get changed input pin values

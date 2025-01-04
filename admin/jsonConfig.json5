@@ -46,16 +46,9 @@
 					"text": "Gpio Settings",
 					"size": 2
 				},
-				"GpioPollSecs": {
-					"type": "number",
-					"label": "Poll interval [s]",
-					"min": 0,
-					"default": 10,
-					"sm": 1
-				},
 				"GpioDebounceMs": {
 					"type": "number",
-					"label": "Debounce [ms]",
+					"label": "Input Debounce [ms]",
 					"min": 0,
 					"default": 20,
 					"sm": 1
@@ -72,7 +65,8 @@
 						{ "title": {"en": "state"			}, "attr": "state",			"type": "text",							"default": "",		"width": "25%"	},
 						{ "title": {"en": "name"			}, "attr": "name",			"type": "text",							"default": "",		"width": "25%"	},
 						{ "title": {"en": "role"			}, "attr": "role",			"type": "text",							"default": "",		"width": "25%"	},
-						{ "title": {"en": "inverted"		}, "attr": "inverted",		"type": "checkbox",						"default": true,	"width": "15%"	},
+						{ "title": {"en": "inverted"		}, "attr": "inverted",		"type": "checkbox",						"default": true,	"width": "5%"	},
+						{ "title": {"en": "Poll [s]"		}, "attr": "pollSecs",		"type": "number", "min": 0,				"default": 0,		"width": "10%"	},
 						{ "title": {"en": "history"			}, "attr": "history",		"type": "checkbox",						"default": true,	"width": "5%"	},
 					]
 				},

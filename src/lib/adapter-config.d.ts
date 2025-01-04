@@ -8,7 +8,6 @@ declare global {
 			'I2cBusNb':			number,
 
 			// GPIO
-			'GpioPollSecs':		number,
 			'GpioDebounceMs':	number,
 			'GpioInput': {
 				gpioNum:		number,
@@ -16,6 +15,7 @@ declare global {
 				name:			string,
 				role:			string,
 				inverted:		boolean,
+				pollSecs:		number,
 				history:		boolean,
 			}[],
 			'GpioOutput': {
