@@ -5,6 +5,10 @@ import { MCP23017 }						from './i2c-mcp23017';
 import   rpio							from 'rpio';		// tried also 'onoff', 'opengpio', 'pigpio', 'pigpio-client' but didn't work
 import   debounce						from 'debounce';
 
+// Note on GPIO pins:		Störungen im Stromnetz führen zu phantom GPIO events
+//		vor allem wenn der Gasbrenner sich ein oder ausschaltet
+//		vor allem bei geschlossenen Sensor-Stromkreisen
+
 // ~~~~~~~~~
 // IoAdapter
 // ~~~~~~~~~
@@ -94,10 +98,10 @@ export class RpiIo extends IoAdapter {
 			};
 
 			// initialize state
-			const stateObj = await this.readState(stateId);
-			const stateVal = readPin();
-			if (stateObj?.val !== stateVal) {
-				await this.writeState(stateId, { 'val': stateVal, 'ack': true });
+			const pinState = await this.readState(stateId);
+			const pinVal   = readPin();
+			if (pinVal !== pinState?.val) {
+				await this.writeState(stateId, { 'val': pinVal, 'ack': true });
 			}
 
 			// poll gpio input pin values
@@ -110,7 +114,7 @@ export class RpiIo extends IoAdapter {
 					const pinState = await this.readState(stateId);
 					const pinVal   = readPin();
 					if (pinVal !== pinState?.val) {
-						this.logf.warn('%-15s %-15s %-10s %-50s %s after %d s', this.constructor.name, 'init_gpio()', 'pollTimer', name, 'val mismatch', pollSecs);
+						this.logf.warn('%-15s %-15s %-10s %-50s %s after %d s', this.constructor.name, 'init_gpio()', 'pollTimer', name, (pinVal ? 'ON' : 'OFF'), pollSecs);
 						await this.writeState(stateId, { 'val': pinVal, 'ack': true });
 					}
 					pollTimer = null;
@@ -126,8 +130,12 @@ export class RpiIo extends IoAdapter {
 				if (pollSecs > 0) {
 					pollRestart();
 				}
-				const val = readPin();
-				void this.writeState(stateId, { val, 'ack': true });
+				void this.readState(stateId).then((pinState: ioBroker.State | null) => {
+					const pinVal   = readPin();
+					if (pinVal !== pinState?.val) {
+						void this.writeState(stateId, { val: pinVal, 'ack': true });
+					}
+				});
 			};
 
 			// handle gpio input pin val changes
@@ -166,14 +174,14 @@ export class RpiIo extends IoAdapter {
 			});
 
 			// initialize state
-			const stateObj = await this.readState(stateId);
-			const stateVal = (typeof stateObj?.val === 'boolean') ? stateObj.val : output.default;
-			if (stateObj?.val !== stateVal) {
-				await this.writeState(stateId, { 'val': stateVal, 'ack': true });
+			const pinState = await this.readState(stateId);
+			const pinVal   = (typeof pinState?.val === 'boolean') ? pinState.val : output.default;
+			if (pinState?.val !== pinVal) {
+				await this.writeState(stateId, { 'val': pinVal, 'ack': true });
 			}
 
 			// open and init GPIO OUTPUT pin
-			rpio.open(output.gpioNum, rpio.OUTPUT, (stateVal !== output.inverted) ? rpio.HIGH : rpio.LOW);
+			rpio.open(output.gpioNum, rpio.OUTPUT, (pinVal !== output.inverted) ? rpio.HIGH : rpio.LOW);
 		}
 
 		// subscribe output state change changes
@@ -181,9 +189,9 @@ export class RpiIo extends IoAdapter {
 			const stateId = `${channelId}.${output.state}`;
 			// on output cmd --> write pin --> set output ack
 			await this.subscribe({ stateId, 'ack': false, 'cb': async (stateChange: StateChange) => {
-				const val = (stateChange.val === true);
-				rpio.write(output.gpioNum, (val !== output.inverted) ? rpio.HIGH : rpio.LOW);
-				await this.writeState(stateId, { val, 'ack': true });
+				const pinVal = (stateChange.val === true);
+				rpio.write(output.gpioNum, (pinVal !== output.inverted) ? rpio.HIGH : rpio.LOW);
+				await this.writeState(stateId, { val: pinVal, 'ack': true });
 			}});
 
 			// on output true ack --> wait autoOffSecs --> set ouput false cmd
@@ -264,18 +272,18 @@ export class RpiIo extends IoAdapter {
 			});
 
 			// initialize state
-			const stateObj = await this.readState(stateId);
-			const stateVal = (typeof stateObj?.val === 'boolean') ? stateObj.val : false;
-			if (stateObj?.val !== stateVal) {
-				await this.writeState(stateId, { 'val': stateVal, 'ack': true });
+			const pinState = await this.readState(stateId);
+			const pinVal   = (typeof pinState?.val === 'boolean') ? pinState.val : false;
+			if (pinVal !== pinState?.val) {
+				await this.writeState(stateId, { 'val': pinVal, 'ack': true });
 			}
 
 			// open MCP23017 INPUT pin
-			mcp.register_pin({ 'pinName': input.mcpPin, 'initVal': stateVal, 'onChange': async (phy: boolean) => {
-				const val = (phy !== input.inverted);
-				const state = await this.readState(stateId);
-				if (state?.val !== val) {
-					await this.writeState(stateId, { val, 'ack': true });		// set val ack
+			mcp.register_pin({ 'pinName': input.mcpPin, 'initVal': pinVal, 'onChange': async (phy: boolean) => {
+				const pinState = await this.readState(stateId);
+				const pinVal = (phy !== input.inverted);
+				if (pinVal !== pinState?.val) {
+					await this.writeState(stateId, { val: pinVal, 'ack': true });		// set val ack
 				}
 			}});
 		}
@@ -319,14 +327,14 @@ export class RpiIo extends IoAdapter {
 			});
 
 			// initialize state
-			const stateObj = await this.readState(stateId);
-			const stateVal = (typeof stateObj?.val === 'boolean') ? stateObj.val : output.default;
-			if (stateObj?.val !== stateVal) {
-				await this.writeState(stateId, { 'val': stateVal, 'ack': true });
+			const pinState = await this.readState(stateId);
+			const pinVal = (typeof pinState?.val === 'boolean') ? pinState.val : output.default;
+			if (pinVal !== pinState?.val) {
+				await this.writeState(stateId, { 'val': pinVal, 'ack': true });
 			}
 
 			// open MCP23017 OUTPUT pin
-			mcp.register_pin({ 'pinName': output.mcpPin, 'initVal': (stateVal !== output.inverted) });
+			mcp.register_pin({ 'pinName': output.mcpPin, 'initVal': (pinVal !== output.inverted) });
 		}
 
 		// subscribe output state change changes
@@ -335,9 +343,9 @@ export class RpiIo extends IoAdapter {
 
 			// on output cmd --> write pin --> set output ack
 			await this.subscribe({ stateId, 'ack': false, 'cb': async (stateChange: StateChange) => {
-				const val = (stateChange.val === true);
-				await mcp.setOutput({ 'pinName': output.mcpPin, 'pinVal': (val !== output.inverted) });
-				await this.writeState(stateId, { val, 'ack': true });
+				const pinVal = (stateChange.val === true);
+				await mcp.setOutput({ 'pinName': output.mcpPin, 'pinVal': (pinVal !== output.inverted) });
+				await this.writeState(stateId, { val: pinVal, 'ack': true });
 			}});
 
 			// on output true ack --> wait autoOffSecs --> set ouput false cmd
@@ -363,9 +371,9 @@ export class RpiIo extends IoAdapter {
 			await this.writeState(this.config.McpResetStateId, { 'val': false, 'ack': true });
 
 			// on McpResetState ON ack --> reset mcp --> set McpResetState OFF cmd
-			await this.subscribe({'stateId': this.config.McpResetStateId, 'ack': true, 'cb': async (stateChange: StateChange) => {
+			await this.subscribe({'stateId': this.config.McpResetStateId, 'ack': true, 'cb': async (pinState: StateChange) => {
 				// ON ack --> OFF cmd
-				if (stateChange.val) {
+				if (pinState.val) {
 					await this.writeState( this.config.McpResetStateId, { 'val': false, 'ack': false });
 
 				// OFF ack --> wait 200 ms --> init mcp
