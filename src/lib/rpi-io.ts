@@ -75,19 +75,6 @@ export class RpiIo extends IoAdapter {
 			const stateId = `${channelId}.${ownState}`;
 			this.logf.debug('%-15s %-15s %-10s %-50s %-25s %s', this.constructor.name, 'init_gpio()', 'input', stateId, name, role);
 
-			// create/update state object
-			await this.writeStateObj(stateId, {
-				'common': {
-					'name':		name,
-					'role':		role,
-					'desc':		`GPIO ${String(gpioNum)} INPUT${inverted ? ' inverted' : ''}`,
-					'type':		'boolean',
-					'read':		true,
-					'write':	false,
-				},
-				'history':		{ 'enabled': history }
-			});
-
 			// open GPIO INPUT pin
 			rpio.open(gpioNum, rpio.INPUT, rpio.PULL_UP);
 
@@ -97,9 +84,22 @@ export class RpiIo extends IoAdapter {
 				return phy !== inverted;
 			};
 
+			// create/update state object
+			await this.writeStateObj(stateId, {
+				'common': {
+					'name':		name,
+					'role':		role,
+					'desc':		`GPIO ${String(gpioNum)} INPUT${inverted ? ' inverted' : ''}`,
+					'read':		true,
+					'write':	false,
+					'def':		false,
+				},
+				'history':		{ 'enabled': history }
+			});
+
 			// initialize state
-			const pinState = await this.readState(stateId);
 			const pinVal   = readPin();
+			const pinState = await this.readState(stateId);
 			if (pinVal !== pinState?.val) {
 				await this.writeState(stateId, { 'val': pinVal, 'ack': true });
 			}
@@ -166,9 +166,9 @@ export class RpiIo extends IoAdapter {
 					'name':		output.name,
 					'role':		output.role,
 					'desc':		`GPIO ${String(output.gpioNum)} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+String(output.autoOffSecs)+' s' : ''}`,
-					'type':		'boolean',
 					'read':		true,
 					'write':	true,
+					'def':		output.default,
 				},
 				'history':		{ 'enabled': output.history }
 			});
@@ -264,9 +264,9 @@ export class RpiIo extends IoAdapter {
 					'name':		input.name,
 					'role':		input.role,
 					'desc':		`MCP ${input.mcpPin} INPUT${input.inverted ? ' inverted' : ''}`,
-					'type':		'boolean',
 					'read':		true,
 					'write':	false,
+					'def':		false,
 				},
 				'history':		{ 'enabled': input.history }
 			});
@@ -319,9 +319,9 @@ export class RpiIo extends IoAdapter {
 					'name':		output.name,
 					'role':		output.role,
 					'desc':		`MCP ${output.mcpPin} OUTPUT${output.inverted ? ' inverted' : ''} default ${output.default ? 'ON' : 'OFF'}${output.autoOffSecs > 0 ? ' auto-off '+String(output.autoOffSecs)+' s' : ''}`,
-					'type':		'boolean',
 					'read':		true,
 					'write':	true,
+					'def':		output.default,
 				},
 				'history':		{ 'enabled': output.history }
 			});
